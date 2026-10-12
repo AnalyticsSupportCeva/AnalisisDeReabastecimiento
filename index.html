@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Logistics Hub - Plataforma de Gestión Operativa</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Notificación flotante (toast) -->
+  <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
+
+  <!-- Botón de cambio de tema -->
+  <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema">🌙</button>
+
+  <!-- ===================== VISTA LOGIN ===================== -->
+  <section id="login-view" class="login-wrapper">
+    <div class="login-card">
+      <div class="brand">
+        <div class="brand-icon">⬡</div>
+        <div>
+          <h1>LOGISTICS HUB</h1>
+          <p class="subtitle">Plataforma de Gestión Operativa</p>
+        </div>
+      </div>
+
+      <form id="login-form" class="login-form" novalidate>
+        <label for="email">Correo electrónico</label>
+        <input type="email" id="email" placeholder="usuario@empresa.com" required />
+
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" placeholder="••••••••" required />
+
+        <button type="submit" id="login-btn" class="btn-primary">
+          <span class="btn-text">Ingresar</span>
+          <span class="spinner" hidden></span>
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===================== VISTA DASHBOARD ===================== -->
+  <main id="app-view" class="app-wrapper" hidden>
+    <header class="hub-header">
+      <div class="brand">
+        <div class="brand-icon">⬡</div>
+        <div>
+          <h1>LOGISTICS HUB</h1>
+          <p class="subtitle">PLATAFORMA DE GESTIÓN OPERATIVA</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <span class="status-badge">● En línea</span>
+        <button id="logout-btn" class="btn-ghost">Salir</button>
+      </div>
+    </header>
+
+    <!-- Grid de 4 tarjetas dinámicas -->
+    <section class="cards-grid">
+      <article class="hub-card" data-section="consultas" tabindex="0">
+        <div class="card-icon">🔍</div>
+        <h2>CONSULTAS</h2>
+        <p>Búsqueda y validación de información</p>
+      </article>
+
+      <article class="hub-card" data-section="bd" tabindex="0">
+        <div class="card-icon">🗄️</div>
+        <h2>BD</h2>
+        <p>Gestión centralizada de registros</p>
+      </article>
+
+      <article class="hub-card" data-section="dashboard" tabindex="0">
+        <div class="card-icon">📈</div>
+        <h2>DASHBOARD</h2>
+        <p>Indicadores y métricas operativas</p>
+      </article>
+
+      <article class="hub-card" data-section="usuarios" tabindex="0">
+        <div class="card-icon">👥</div>
+        <h2>USUARIOS</h2>
+        <p>Accesos, perfiles y permisos</p>
+      </article>
+    </section>
+
+    <!-- Panel CRUD de la tabla 'items' -->
+    <section class="panel">
+      <h3>Gestión de registros - tabla <code>items</code></h3>
+
+      <form id="item-form" class="item-form">
+        <input type="text" id="item-name" placeholder="Nombre del registro" required />
+        <input type="text" id="item-desc" placeholder="Descripción" />
+        <button type="submit" id="item-btn" class="btn-primary small">
+          <span class="btn-text">Agregar</span>
+          <span class="spinner" hidden></span>
+        </button>
+      </form>
+
+      <div class="table-wrapper">
+        <table id="items-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Descripción</th>
+              <th>Creado</th>
+            </tr>
+          </thead>
+          <tbody id="items-body"></tbody>
+        </table>
+        <p id="empty-state" class="empty-state" hidden>No hay registros aún.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
