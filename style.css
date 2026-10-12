@@ -316,6 +316,6 @@ body {
   .cards-grid { grid-template-columns: repeat(4, 1fr); }
 }
 /* ===================== UTILIDADES ===================== */
-.hidden {
+[hidden] {
   display: none !important;
 }
