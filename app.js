@@ -5,7 +5,7 @@ const SUPABASE_URL = "https://lilgxfmslakbchtmplec.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ya_zw1lFI5LtsiSwGd4Atw_O1BrniDA";
 
 // La librería del CDN expone el global `supabase` (solo para createClient)
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient("https://lilgxfmslakbchtmplec.supabase.co", "sb_publishable_ya_zw1lFI5LtsiSwGd4Atw_O1BrniDA");
 
 /* =========================================================
    REFERENCIAS AL DOM
@@ -40,15 +40,16 @@ const toastEl       = document.getElementById("toast");
 logoutBtn.addEventListener("click", async () => {
   logoutBtn.disabled = true;
   try {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabaseClient.auth.signOut();
     if (error) throw error;
 
     // Alterna vistas usando la MISMA mecánica (clase .hidden)
     appView.classList.add("hidden");
     loginView.classList.remove("hidden");
 
-    // Limpia el formulario de login
-    document.getElementById("login-form")?.reset();
+  // Limpia el formulario de login
+  const loginForm = document.getElementById("login-form"); // ajusta al id real
+  loginForm?.reset();
 
     showToast("Sesión cerrada correctamente", "success");
   } catch (err) {
