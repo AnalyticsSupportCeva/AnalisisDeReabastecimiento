@@ -1,316 +1,269 @@
-/* =======================================================================
+/* =========================================================
    CONFIGURACIÓN DE SUPABASE
-   Reemplaza estos valores por tus credenciales reales del proyecto.
-   Los encuentras en: Supabase Dashboard → Project Settings → API
-   ======================================================================= */
-const SUPABASE_URL = "https://lilgxfmslakbchtmplec.supabase.co";   // ← reemplazar
-const SUPABASE_ANON_KEY = "sb_publishable_ya_zw1lFI5LtsiSwGd4Atw_O1BrniDA";              // ← reemplazar
+========================================================= */
+const SUPABASE_URL = "https://lilgxfmslakbchtmplec.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_ya_zw1lFI5LtsiSwGd4Atw_O1BrniDA";
 
-// Inicialización del cliente de Supabase (desde el CDN global `supabase`)
+// La librería del CDN expone el global `supabase` (solo para createClient)
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* =======================================================================
+/* =========================================================
    REFERENCIAS AL DOM
-   ======================================================================= */
+========================================================= */
 const loginView   = document.getElementById("login-view");
 const appView     = document.getElementById("app-view");
 const loginForm   = document.getElementById("login-form");
+const emailInput  = document.getElementById("email");
+const passwordInput = document.getElementById("password");
 const loginBtn    = document.getElementById("login-btn");
 const logoutBtn   = document.getElementById("logout-btn");
+
+const itemsForm   = document.getElementById("items-form");
+const itemNameInput = document.getElementById("item-name");
+const itemsTableBody = document.querySelector("#items-table tbody");
+
 const themeToggle = document.getElementById("theme-toggle");
-const toast       = document.getElementById("toast");
+const toastEl     = document.getElementById("toast");
 
-const itemForm    = document.getElementById("item-form");
-const itemBtn     = document.getElementById("item-btn");
-const itemName    = document.getElementById("item-name");
-const itemDesc    = document.getElementById("item-desc");
-const itemsBody   = document.getElementById("items-body");
-const emptyState  = document.getElementById("empty-state");
+/* =========================================================
+   UTILIDADES: VISTAS
+========================================================= */
+function showApp() {
+  loginView.classList.add("hidden");
+  appView.classList.remove("hidden");
+}
 
-const cards       = document.querySelectorAll(".hub-card");
+function showLogin() {
+  appView.classList.add("hidden");
+  loginView.classList.remove("hidden");
+}
 
-/* =======================================================================
-   UTILIDADES DE INTERFAZ
-   ======================================================================= */
-
-/**
-
- * Muestra una notificación flotante (toast).
- * @param {string} message - Texto a mostrar.
- * @param {"success"|"error"} [type="success"] - Tipo de notificación.
- */
+/* =========================================================
+   UTILIDADES: TOAST
+========================================================= */
+let toastTimeout;
 function showToast(message, type = "success") {
-  toast.textContent = message;
-  toast.className = `toast show ${type}`;
-  // Oculta automáticamente tras 3.5s
-  setTimeout(() => {
-    toast.className = "toast";
-  }, 3500);
+  if (!toastEl) return;
+  clearTimeout(toastTimeout);
+
+  toastEl.textContent = message;
+  toastEl.className = `toast ${type} show`;
+
+  toastTimeout = setTimeout(() => {
+    toastEl.classList.remove("show");
+  }, 3000);
 }
 
-/**
-
- * Activa/desactiva el estado "loading" de un botón con spinner.
- * @param {HTMLButtonElement} btn - Botón a modificar.
- * @param {boolean} isLoading - true = cargando.
- */
-function setLoading(btn, isLoading) {
-  const text = btn.querySelector(".btn-text");
-  const spinner = btn.querySelector(".spinner");
-  btn.disabled = isLoading;
-  if (text) text.style.visibility = isLoading ? "hidden" : "visible";
-  if (spinner) spinner.hidden = !isLoading;
+/* =========================================================
+   UTILIDADES: ESCAPAR HTML (prevención XSS)
+========================================================= */
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&")
+    .replace(/</g, "<")
+    .replace(/>/g, ">")
+    .replace(/"/g, '"')
+    .replace(/'/g, "&#039;");
 }
 
-/* =======================================================================
-   GESTIÓN DE TEMA (OSCURO / CLARO)
-   ======================================================================= */
+/* =========================================================
+   UTILIDADES: ESTADO DE CARGA EN BOTÓN
+========================================================= */
+function setLoading(button, isLoading) {
+  if (!button) return;
+  if (isLoading) {
+    button.disabled = true;
+    button.dataset.originalText = button.textContent;
+    button.innerHTML = '<span class="spinner"></span>';
+  } else {
+    button.disabled = false;
+    if (button.dataset.originalText) {
+      button.textContent = button.dataset.originalText;
+    }
+  }
+}
 
-/** Aplica el tema guardado en localStorage al cargar la página. */
+/* =========================================================
+   AUTENTICACIÓN
+========================================================= */
+async function handleLogin(email, password) {
+  setLoading(loginBtn, true);
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  setLoading(loginBtn, false);
+
+  if (error) {
+    showToast(error.message, "error");
+    return;
+  }
+
+  showApp();
+  showToast("Sesión iniciada correctamente", "success");
+  loadItems();
+}
+
+async function handleLogout() {
+  const { error } = await supabaseClient.auth.signOut();
+  if (error) {
+    showToast(error.message, "error");
+    return;
+  }
+  showLogin();
+  showToast("Sesión cerrada", "success");
+}
+
+/* =========================================================
+   CRUD: LEER ITEMS
+========================================================= */
+async function loadItems() {
+  if (!itemsTableBody) return;
+
+  const { data, error } = await supabaseClient
+    .from("items")
+    .select("*")
+    .order("id", { ascending: false });
+
+  if (error) {
+    showToast(error.message, "error");
+    return;
+  }
+
+  renderItems(data || []);
+}
+
+function renderItems(items) {
+  itemsTableBody.innerHTML = "";
+
+  if (items.length === 0) {
+    itemsTableBody.innerHTML =
+      '<tr><td colspan="3" style="text-align:center">Sin registros</td></tr>';
+    return;
+  }
+
+  items.forEach((item) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${escapeHtml(item.id)}</td>
+      <td>${escapeHtml(item.name)}</td>
+      <td>
+        <button class="btn-ghost" data-delete="${escapeHtml(item.id)}">
+          Eliminar
+        </button>
+      </td>
+    `;
+    itemsTableBody.appendChild(row);
+  });
+}
+
+/* =========================================================
+   CRUD: CREAR ITEM
+========================================================= */
+async function handleAddItem(name) {
+  const { error } = await supabaseClient
+    .from("items")
+    .insert([{ name }]);
+
+  if (error) {
+    showToast(error.message, "error");
+    return;
+  }
+
+  showToast("Registro agregado", "success");
+  itemNameInput.value = "";
+  loadItems();
+}
+
+/* =========================================================
+   CRUD: ELIMINAR ITEM
+========================================================= */
+async function handleDeleteItem(id) {
+  const { error } = await supabaseClient
+    .from("items")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    showToast(error.message, "error");
+    return;
+  }
+
+  showToast("Registro eliminado", "success");
+  loadItems();
+}
+
+/* =========================================================
+   TEMA OSCURO / CLARO
+========================================================= */
 function initTheme() {
   const saved = localStorage.getItem("theme") || "dark";
   document.documentElement.setAttribute("data-theme", saved);
-  themeToggle.textContent = saved === "dark" ? "🌙" : "☀️";
 }
 
-/** Alterna entre tema oscuro y claro y lo persiste. */
 function toggleTheme() {
   const current = document.documentElement.getAttribute("data-theme");
   const next = current === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", next);
-  themeToggle.textContent = next === "dark" ? "🌙" : "☀️";
   localStorage.setItem("theme", next);
 }
 
-/* =======================================================================
-   AUTENTICACIÓN (DEMO)
-   Utiliza Supabase Auth con email/contraseña. Si prefieres un login
-   simulado, puedes comentar la llamada a Supabase e ir directo a showApp().
-   ======================================================================= */
-
-/**
-
- * Maneja el envío del formulario de login.
- * Intenta iniciar sesión con Supabase Auth.
- * @param {Event} e
- */
-async function handleLogin(email, password) {
-  console.log('1. Iniciando login con:', email);
-
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-  console.log('2. Respuesta Supabase →', { data, error });
-
-  if (error) {
-    console.log('3. ERROR:', error.message);
-    showToast(error.message, 'error');
-    return;
-  }
-
-  console.log('4. Login OK, mostrando app...');
-  showApp();
-}
-
-
-/** Cierra la sesión actual y vuelve a la vista de login. */
-async function handleLogout() {
-  try {
-    await supabaseClient.auth.signOut();
-  } catch (err) {
-    console.error("Error al cerrar sesión:", err.message);
-  } finally {
-    appView.hidden = true;
-    loginView.hidden = false;
-    showToast("Sesión cerrada", "success");
-  }
-}
-
-/** Muestra la vista principal y carga los datos. */
-function showApp() {
-  loginView.hidden = true;
-  appView.hidden = false;
-  fetchItems(); // Carga inicial de registros
-}
-
-/* =======================================================================
-   LÓGICA DE DATOS CON SUPABASE (tabla 'items')
-   Estructura sugerida de la tabla:
-     id          : uuid / int8 (PK)
-     name        : text
-     description : text
-     created_at  : timestamptz (default now())
-   ======================================================================= */
-
-/**
-
- * INSERTA un nuevo registro en la tabla 'items'.
- * @param {Event} e
- */
-async function insertItem(e) {
-  e.preventDefault();
-  const name = itemName.value.trim();
-  const description = itemDesc.value.trim();
-
-  if (!name) {
-    showToast("El nombre es obligatorio", "error");
-    return;
-  }
-
-  setLoading(itemBtn, true);
-
-  try {
-    const { error } = await supabaseClient
-      .from("items")
-      .insert([{ name, description }]);
-
-    if (error) throw error;
-
-    showToast("Registro agregado correctamente ✓", "success");
-    itemForm.reset();
-    await fetchItems(); // Refresca la tabla tras insertar
-  } catch (err) {
-    console.error("Error al insertar:", err.message);
-    showToast("No se pudo agregar el registro", "error");
-  } finally {
-    setLoading(itemBtn, false);
-  }
-}
-
-/**
-
- * LEE todos los registros de 'items' ordenados por fecha
- * de creación de forma descendente (más recientes primero).
- */
-async function fetchItems() {
-  try {
-    const { data, error } = await supabaseClient
-      .from("items")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-
-    renderItems(data || []);
-  } catch (err) {
-    console.error("Error al leer datos:", err.message);
-    showToast("Error al cargar los registros", "error");
-  }
-}
-
-/**
-
- * Renderiza las filas de la tabla a partir de un array de ítems.
- * @param {Array<Object>} items
- */
-function renderItems(items) {
-  itemsBody.innerHTML = "";
-
-  // Estado vacío
-  if (items.length === 0) {
-    emptyState.hidden = false;
-    return;
-  }
-  emptyState.hidden = true;
-
-  // Genera una fila por cada registro
-  items.forEach((item) => {
-    const tr = document.createElement("tr");
-
-    // Formatea la fecha de creación de forma legible
-    const fecha = item.created_at
-      ? new Date(item.created_at).toLocaleString("es-ES")
-      : "-";
-
-    tr.innerHTML = `
-      <td>${escapeHtml(item.name ?? "")}</td>
-      <td>${escapeHtml(item.description ?? "")}</td>
-      <td>${fecha}</td>
-    `;
-    itemsBody.appendChild(tr);
+/* =========================================================
+   EVENT LISTENERS
+========================================================= */
+if (loginForm) {
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    await handleLogin(email, password);
   });
 }
 
-/**
-
- * Escapa caracteres HTML para prevenir inyección (XSS) al renderizar.
- * @param {string} str
- * @returns {string}
- */
-function escapeHtml(str) {
-  const map = {
-    "&": "&",
-    "<": "<",
-    ">": ">",
-    '"': '"',
-    "'": "&#039;"
-  };
-  return String(str).replace(/[&<>"']/g, (char) => map[char]);
-}
-
-/* =======================================================================
-   NAVEGACIÓN DE TARJETAS (CONSULTAS / BD / DASHBOARD / USUARIOS)
-   Punto de extensión: aquí puedes enrutar a cada módulo real.
-   ======================================================================= */
-
-/** Asigna el evento click/teclado a cada tarjeta del hub. */
-function initCards() {
-  cards.forEach((card) => {
-    const section = card.dataset.section;
-
-    const activate = () => {
-      showToast(`Abriendo módulo: ${section.toUpperCase()}`, "success");
-      console.log(`Navegación → ${section}`);
-      // TODO: aquí integrarías la lógica real de cada sección.
-    };
-
-    card.addEventListener("click", activate);
-    // Accesibilidad: activar con Enter o Espacio
-    card.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        activate();
-      }
-    });
-  });
-}
-
-/* =======================================================================
-   INICIALIZACIÓN GENERAL
-   ======================================================================= */
-
-/** Comprueba si ya existe una sesión activa al cargar la app. */
-async function checkSession() {
-  try {
-    const { data } = await supabaseClient.auth.getSession();
-    if (data.session) {
-      showApp(); // Si hay sesión, salta el login
-    }
-  } catch (err) {
-    console.error("Error al verificar sesión:", err.message);
-  }
-}
-
-/** Registra todos los event listeners de la aplicación. */
-function initEventListeners() {
-  loginForm.addEventListener("submit", handleLogin);
+if (logoutBtn) {
   logoutBtn.addEventListener("click", handleLogout);
-  itemForm.addEventListener("submit", insertItem);
+}
+
+if (itemsForm) {
+  itemsForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = itemNameInput.value.trim();
+    if (!name) {
+      showToast("Escribe un nombre", "error");
+      return;
+    }
+    await handleAddItem(name);
+  });
+}
+
+// Delegación de eventos para botones "Eliminar"
+if (itemsTableBody) {
+  itemsTableBody.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-delete]");
+    if (btn) {
+      handleDeleteItem(btn.dataset.delete);
+    }
+  });
+}
+
+if (themeToggle) {
   themeToggle.addEventListener("click", toggleTheme);
 }
 
-/** Punto de entrada: se ejecuta cuando el DOM está listo. */
-document.addEventListener("DOMContentLoaded", () => {
-  initTheme();
-  initEventListeners();
-  initCards();
-  checkSession();
-});
-
+/* =========================================================
+   INICIALIZACIÓN
+========================================================= */
 async function init() {
-  const { data: { session } } = await supabase.auth.getSession();
+  initTheme();
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
 
   if (session) {
     showApp();
+    loadItems();
   } else {
     showLogin();
   }
