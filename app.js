@@ -10,32 +10,62 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 /* =========================================================
    REFERENCIAS AL DOM
 ========================================================= */
-const loginView   = document.getElementById("login-view");
-const appView     = document.getElementById("app-view");
-const loginForm   = document.getElementById("login-form");
-const emailInput  = document.getElementById("email");
+const loginView     = document.getElementById("login-view");
+const appView       = document.getElementById("app-view");
+const loginForm     = document.getElementById("login-form");
+const emailInput    = document.getElementById("email");
 const passwordInput = document.getElementById("password");
-const loginBtn    = document.getElementById("login-btn");
-const logoutBtn   = document.getElementById("logout-btn");
+const loginBtn      = document.getElementById("login-btn");
+const logoutBtn     = document.getElementById("logout-btn");
 
-const itemsForm   = document.getElementById("items-form");
+
+// FIX #1: el formulario en el HTML tiene id="item-form" (no "items-form")
+const itemsForm     = document.getElementById("item-form");
 const itemNameInput = document.getElementById("item-name");
+const itemDescInput = document.getElementById("item-desc"); // FIX: se usaba el input pero no se leía
+const itemBtn       = document.getElementById("item-btn");  // FIX: faltaba referencia para el loading
 const itemsTableBody = document.querySelector("#items-table tbody");
+const emptyState    = document.getElementById("empty-state");
 
-const themeToggle = document.getElementById("theme-toggle");
-const toastEl     = document.getElementById("toast");
+const themeToggle   = document.getElementById("theme-toggle");
+const toastEl       = document.getElementById("toast");
 
 /* =========================================================
    UTILIDADES: VISTAS
+   FIX #2: el HTML usa el atributo `hidden`, no la clase .hidden.
+   Alternamos la propiedad `hidden` para que ocultar/mostrar funcione.
 ========================================================= */
+
+// --- Cerrar sesión ---
+logoutBtn.addEventListener("click", async () => {
+  logoutBtn.disabled = true;
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+
+    // Alterna vistas usando la MISMA mecánica (clase .hidden)
+    appView.classList.add("hidden");
+    loginView.classList.remove("hidden");
+
+    // Limpia el formulario de login
+    document.getElementById("login-form")?.reset();
+
+    showToast("Sesión cerrada correctamente", "success");
+  } catch (err) {
+    showToast("Error al cerrar sesión: " + err.message, "error");
+  } finally {
+    logoutBtn.disabled = false;
+  }
+});
+
 function showApp() {
-  loginView.classList.add("hidden");
-  appView.classList.remove("hidden");
+  loginView.hidden = true;
+  appView.hidden = false;
 }
 
 function showLogin() {
-  appView.classList.add("hidden");
-  loginView.classList.remove("hidden");
+  appView.hidden = true;
+  loginView.hidden = false;
 }
 
 /* =========================================================
@@ -56,6 +86,7 @@ function showToast(message, type = "success") {
 
 /* =========================================================
    UTILIDADES: ESCAPAR HTML (prevención XSS)
+   FIX: entidades correctas (& -> &, < -> <, etc.)
 ========================================================= */
 function escapeHtml(str) {
   if (str == null) return "";
@@ -69,19 +100,19 @@ function escapeHtml(str) {
 
 /* =========================================================
    UTILIDADES: ESTADO DE CARGA EN BOTÓN
+   FIX: ya no se destruye el innerHTML del botón. Alternamos
+   la visibilidad del .btn-text y del .spinner definidos en el HTML.
 ========================================================= */
 function setLoading(button, isLoading) {
   if (!button) return;
-  if (isLoading) {
-    button.disabled = true;
-    button.dataset.originalText = button.textContent;
-    button.innerHTML = '<span class="spinner"></span>';
-  } else {
-    button.disabled = false;
-    if (button.dataset.originalText) {
-      button.textContent = button.dataset.originalText;
-    }
-  }
+
+  const text = button.querySelector(".btn-text");
+  const spinner = button.querySelector(".spinner");
+
+  button.disabled = isLoading;
+
+  if (text) text.hidden = isLoading;
+  if (spinner) spinner.hidden = !isLoading;
 }
 
 /* =========================================================
@@ -139,17 +170,25 @@ async function loadItems() {
 function renderItems(items) {
   itemsTableBody.innerHTML = "";
 
-  if (items.length === 0) {
-    itemsTableBody.innerHTML =
-      '<tr><td colspan="3" style="text-align:center">Sin registros</td></tr>';
+  // FIX #4: usamos el elemento #empty-state del HTML en vez de una fila duplicada
+  if (!items.length) {
+    if (emptyState) emptyState.hidden = false;
     return;
   }
+  if (emptyState) emptyState.hidden = true;
 
   items.forEach((item) => {
     const row = document.createElement("tr");
+    // FIX #3: las celdas ahora coinciden con el <thead>:
+    // Nombre | Descripción | Creado | (Acciones)
+    const created = item.created_at
+      ? new Date(item.created_at).toLocaleString()
+      : "";
+
     row.innerHTML = `
-      <td>${escapeHtml(item.id)}</td>
       <td>${escapeHtml(item.name)}</td>
+      <td>${escapeHtml(item.description)}</td>
+      <td>${escapeHtml(created)}</td>
       <td>
         <button class="btn-ghost" data-delete="${escapeHtml(item.id)}">
           Eliminar
@@ -162,11 +201,16 @@ function renderItems(items) {
 
 /* =========================================================
    CRUD: CREAR ITEM
+   FIX #5: ahora el botón muestra estado de carga y se guarda la descripción.
 ========================================================= */
-async function handleAddItem(name) {
+async function handleAddItem(name, description) {
+  setLoading(itemBtn, true);
+
   const { error } = await supabaseClient
     .from("items")
-    .insert([{ name }]);
+    .insert([{ name, description }]);
+
+  setLoading(itemBtn, false);
 
   if (error) {
     showToast(error.message, "error");
@@ -175,6 +219,7 @@ async function handleAddItem(name) {
 
   showToast("Registro agregado", "success");
   itemNameInput.value = "";
+  if (itemDescInput) itemDescInput.value = "";
   loadItems();
 }
 
@@ -231,11 +276,14 @@ if (itemsForm) {
   itemsForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = itemNameInput.value.trim();
+    const description = itemDescInput ? itemDescInput.value.trim() : "";
+
     if (!name) {
       showToast("Escribe un nombre", "error");
       return;
     }
-    await handleAddItem(name);
+
+    await handleAddItem(name, description);
   });
 }
 
@@ -259,7 +307,9 @@ if (themeToggle) {
 async function init() {
   initTheme();
 
-  const { data: { session } } = await supabaseClient.auth.getSession();
+  const {
+    data: { session },
+  } = await supabaseClient.auth.getSession();
 
   if (session) {
     showApp();
