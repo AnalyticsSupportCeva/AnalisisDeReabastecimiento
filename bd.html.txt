@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Base de Datos - Análisis de SKU</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="hub-header">
+    <div class="brand">
+      <div class="brand-icon">■</div>
+      <div>
+        <h1>BASE DE DATOS</h1>
+        <p class="subtitle">GESTIÓN DE REGISTROS</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <a href="index.html" class="btn-ghost">← Volver</a>
+      <button id="logout-btn" class="btn-ghost">Salir</button>
+    </div>
+  </header>
+
+  <main class="app-wrapper">
+    <section id="bd-panel" class="panel">
+      <h3>Gestión de <code>BasedeDatos</code></h3>
+
+      <form id="bd-form" class="item-form">
+        <input type="text" id="bd-id" placeholder="ID (para actualizar / eliminar)" />
+        <input type="text" id="bd-nombre" placeholder="Nombre" required />
+        <input type="text" id="bd-valor" placeholder="Valor" />
+      </form>
+
+      <div class="header-right" style="flex-wrap:wrap; gap:.5rem; margin:1rem 0;">
+        <button type="button" class="btn-primary small" id="bd-add">Agregar</button>
+        <button type="button" class="btn-primary small" id="bd-update">Actualizar</button>
+        <button type="button" class="btn-primary small" id="bd-delete">Eliminar</button>
+        <button type="button" class="btn-primary small" id="bd-select">Seleccionar</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table id="bd-table">
+          <thead>
+            <tr><th>ID</th><th>Nombre</th><th>Valor</th></tr>
+          </thead>
+          <tbody id="bd-body"></tbody>
+        </table>
+        <p id="bd-empty" class="empty-state" hidden>No hay registros aún.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Supabase + tu lógica BD -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="bd.js"></script>
+</body>
+</html>
