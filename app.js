@@ -86,20 +86,6 @@ function showToast(message, type = "success") {
 }
 
 /* =========================================================
-   UTILIDADES: ESCAPAR HTML (prevención XSS)
-   FIX: entidades correctas (& -> &, < -> <, etc.)
-========================================================= */
-function escapeHtml(str) {
-  if (str == null) return "";
-  return String(str)
-    .replace(/&/g, "&")
-    .replace(/</g, "<")
-    .replace(/>/g, ">")
-    .replace(/"/g, '"')
-    .replace(/'/g, "&#039;");
-}
-
-/* =========================================================
    UTILIDADES: ESTADO DE CARGA EN BOTÓN
    FIX: ya no se destruye el innerHTML del botón. Alternamos
    la visibilidad del .btn-text y del .spinner definidos en el HTML.
@@ -318,6 +304,157 @@ async function init() {
   } else {
     showLogin();
   }
+}
+
+/* =========================================================
+   NAVEGACIÓN DE TARJETAS (hub-cards)
+========================================================= */
+const bdPanel   = document.getElementById("bd-panel");
+const itemsPanel = document.querySelector(".panel"); // panel original de 'items'
+
+document.querySelectorAll(".hub-card").forEach((card) => {
+  card.addEventListener("click", () => {
+    const section = card.dataset.section;
+    if (section === "bd") {
+      itemsPanel.hidden = true;   // oculta el panel de items
+      bdPanel.hidden = false;     // muestra el panel BD
+      loadBD();                   // carga registros al abrir
+    }
+  });
+  // Accesibilidad: activar con Enter/Espacio (las tarjetas tienen tabindex="0")
+  card.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      card.click();
+    }
+  });
+});
+
+/* =========================================================
+   CRUD: TABLA 'BasedeDatos'
+========================================================= */
+const bdId     = document.getElementById("bd-id");
+const bdNombre = document.getElementById("bd-nombre");
+const bdValor  = document.getElementById("bd-valor");
+const bdBody   = document.getElementById("bd-body");
+const bdEmpty  = document.getElementById("bd-empty");
+
+const TABLA_BD = "BasedeDatos";
+
+// --- SELECCIONAR (Read) ---
+async function loadBD() {
+  const { data, error } = await supabaseClient
+    .from(TABLA_BD)
+    .select("*")
+    .order("id", { ascending: false });
+
+  if (error) {
+    showToast(error.message, "error");
+    return;
+  }
+  renderBD(data || []);
+}
+
+function renderBD(rows) {
+  bdBody.innerHTML = "";
+  if (!rows.length) {
+    if (bdEmpty) bdEmpty.hidden = false;
+    return;
+  }
+  if (bdEmpty) bdEmpty.hidden = true;
+
+  rows.forEach((r) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(r.id)}</td>
+      <td>${escapeHtml(r.nombre)}</td>
+      <td>${escapeHtml(r.valor)}</td>
+    `;
+    // Al hacer clic en una fila, carga sus datos en el formulario
+    tr.addEventListener("click", () => {
+      bdId.value     = r.id ?? "";
+      bdNombre.value = r.nombre ?? "";
+      bdValor.value  = r.valor ?? "";
+    });
+    bdBody.appendChild(tr);
+  });
+}
+
+// --- AGREGAR (Create) ---
+async function addBD() {
+  const nombre = bdNombre.value.trim();
+  const valor  = bdValor.value.trim();
+  if (!nombre) return showToast("El nombre es obligatorio", "error");
+
+  const { error } = await supabaseClient
+    .from(TABLA_BD)
+    .insert([{ nombre, valor }]);
+
+  if (error) return showToast(error.message, "error");
+  showToast("Registro agregado", "success");
+  limpiarBD();
+  loadBD();
+}
+
+// --- ACTUALIZAR (Update) ---
+async function updateBD() {
+  const id = bdId.value.trim();
+  if (!id) return showToast("Indica el ID a actualizar", "error");
+
+  const { error } = await supabaseClient
+    .from(TABLA_BD)
+    .update({ nombre: bdNombre.value.trim(), valor: bdValor.value.trim() })
+    .eq("id", id);
+
+  if (error) return showToast(error.message, "error");
+  showToast("Registro actualizado", "success");
+  limpiarBD();
+  loadBD();
+}
+
+// --- ELIMINAR (Delete) ---
+async function deleteBD() {
+  const id = bdId.value.trim();
+  if (!id) return showToast("Indica el ID a eliminar", "error");
+
+  const { error } = await supabaseClient
+    .from(TABLA_BD)
+    .delete()
+    .eq("id", id);
+
+  if (error) return showToast(error.message, "error");
+  showToast("Registro eliminado", "success");
+  limpiarBD();
+  loadBD();
+}
+
+function limpiarBD() {
+  bdId.value = "";
+  bdNombre.value = "";
+  bdValor.value = "";
+}
+
+// --- Enlazar los 4 botones ---
+document.getElementById("bd-add").addEventListener("click", addBD);
+document.getElementById("bd-update").addEventListener("click", updateBD);
+document.getElementById("bd-delete").addEventListener("click", deleteBD);
+document.getElementById("bd-select").addEventListener("click", loadBD);
+
+const cardBD = document.getElementById('card-bd');
+
+if (cardBD) {
+  // Clic en cualquier parte de la tarjeta
+  cardBD.addEventListener('click', () => {
+    window.location.href = 'bd.html';
+  });
+
+  // Accesibilidad: permitir Enter / Espacio con el teclado
+  cardBD.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      window.location.href = 'bd.html';
+    }
+  });
 }
 
 init();
