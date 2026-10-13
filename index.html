@@ -20,8 +20,8 @@
       <div class="brand">
         <div class="brand-icon">⬡</div>
         <div>
-          <h1>LOGISTICS HUB</h1>
-          <p class="subtitle">Plataforma de Gestión Operativa</p>
+          <h1>LOGISTICS SUPPORT</h1>
+          <p class="subtitle">PLATAFORMA CREADA POR - JOEL VALLEJOS</p>
         </div>
       </div>
 
@@ -40,77 +40,50 @@
     </div>
   </section>
 
-  <!-- ===================== VISTA DASHBOARD ===================== -->
-  <main id="app-view" class="app-wrapper" hidden>
-    <header class="hub-header">
-      <div class="brand">
-        <div class="brand-icon">⬡</div>
-        <div>
-          <h1>ANALISIS DE SKU</h1>
-          <p class="subtitle">PLATAFORMA DE GESTIÓN ADMINISTRATIVA</p>
-        </div>
+<!-- ===================== VISTA DASHBOARD ===================== -->
+<main id="app-view" class="app-wrapper" hidden>
+  <header class="hub-header">
+    <div class="brand">
+      <div class="brand-icon">■</div>
+      <div>
+        <h1>ANALISIS DE SKU</h1>
+        <p class="subtitle">PLATAFORMA DE GESTIÓN ADMINISTRATIVA</p>
       </div>
-      <div class="header-right">
-        <span class="status-badge">● En línea</span>
-        <button id="logout-btn" class="btn-ghost">Salir</button>
-      </div>
-    </header>
+    </div>
+    <div class="header-right">
+      <span class="status-badge">● En línea</span>
+      <button id="logout-btn" class="btn-ghost">Salir</button>
+    </div>
+  </header>
 
-    <!-- Grid de 4 tarjetas dinámicas -->
-    <section class="cards-grid">
-      <article class="hub-card" data-section="consultas" tabindex="0">
-        <div class="card-icon">🔍</div>
-        <h2>CONSULTAS</h2>
-        <p>Búsqueda y validación de información</p>
-      </article>
+  <!-- Grid de 4 tarjetas dinámicas -->
+  <section class="cards-grid">
+  <article class="hub-card" data-section="consultas" tabindex="0">
+    <div class="card-icon">🔍</div>
+    <h2>CONSULTAS</h2>
+    <p>Búsqueda y validación de información</p>
+  </article>
 
-      <article class="hub-card" data-section="bd" tabindex="0">
-        <div class="card-icon">🗄️</div>
-        <h2>BD</h2>
-        <p>Gestión centralizada de registros</p>
-      </article>
+  <article class="hub-card" data-section="bd" tabindex="0">
+    <div class="card-icon">🗂️</div>
+    <a href="bd.html" class="card" id="card-bd">
+    <span class="card-title">BD</span>
+    </a>    
+    <p>Gestión centralizada de registros</p>
+  </article>
 
-      <article class="hub-card" data-section="dashboard" tabindex="0">
-        <div class="card-icon">📈</div>
-        <h2>DASHBOARD</h2>
-        <p>Indicadores y métricas operativas</p>
-      </article>
+  <article class="hub-card" data-section="dashboard" tabindex="0">
+    <div class="card-icon">📈</div>
+    <h2>DASHBOARD</h2>
+    <p>Indicadores y métricas operativas</p>
+  </article>
 
-      <article class="hub-card" data-section="usuarios" tabindex="0">
-        <div class="card-icon">👥</div>
-        <h2>USUARIOS</h2>
-        <p>Accesos, perfiles y permisos</p>
-      </article>
-    </section>
-
-    <!-- Panel CRUD de la tabla 'items' -->
-    <section class="panel">
-      <h3>Gestión de registros - tabla <code>items</code></h3>
-
-      <form id="item-form" class="item-form">
-        <input type="text" id="item-name" placeholder="Nombre del registro" required />
-        <input type="text" id="item-desc" placeholder="Descripción" />
-        <button type="submit" id="item-btn" class="btn-primary small">
-          <span class="btn-text">Agregar</span>
-          <span class="spinner" hidden></span>
-        </button>
-      </form>
-
-      <div class="table-wrapper">
-        <table id="items-table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Descripción</th>
-              <th>Creado</th>
-            </tr>
-          </thead>
-          <tbody id="items-body"></tbody>
-        </table>
-        <p id="empty-state" class="empty-state" hidden>No hay registros aún.</p>
-      </div>
-    </section>
-  </main>
+  <article class="hub-card" data-section="usuarios" tabindex="0">
+    <div class="card-icon">👥</div>
+    <h2>USUARIOS</h2>
+    <p>Accesos, perfiles y permisos</p>
+  </article>
+</section>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
